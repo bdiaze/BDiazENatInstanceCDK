@@ -9,12 +9,16 @@ namespace BDiazENatInstance
         internal BDiazENatInstanceStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props) {
             string appName = System.Environment.GetEnvironmentVariable("APP_NAME")!;
             string vpcId = System.Environment.GetEnvironmentVariable("VPC_ID");
+            // Subnets públicas para instancia NAT...
             string subnetId1 = System.Environment.GetEnvironmentVariable("SUBNET_ID_1")!;
             string subnetId2 = System.Environment.GetEnvironmentVariable("SUBNET_ID_2")!;
-            string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1")!;
-            string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2")!;
             string subnetAz1 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_1")!;
             string subnetAz2 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_2")!;
+
+            // CIDR de subnet privada para reglas de ingress de security group...
+            string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1")!;
+            string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2")!;
+
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID")!;
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE");
             string imageName = System.Environment.GetEnvironmentVariable("IMAGE_NAME");
@@ -24,15 +28,13 @@ namespace BDiazENatInstance
                 VpcId = vpcId
             });
 
-            //Se obtienen referencias a las subredes privadas...
+            //Se obtienen referencias a las subredes públicas...
             ISubnet subnet1 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet1", new SubnetAttributes { 
                 SubnetId = subnetId1,
-                Ipv4CidrBlock = subnetCidr1,
                 AvailabilityZone = subnetAz1,
             });
             ISubnet subnet2 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet2", new SubnetAttributes { 
                 SubnetId = subnetId2,
-                Ipv4CidrBlock = subnetCidr2,
                 AvailabilityZone = subnetAz2,
             });
 
@@ -64,11 +66,11 @@ namespace BDiazENatInstance
                 AllowAllOutbound = false,
             });
             // Se crean reglas de ingress para HTTP desde redes privadas...
-            securityGroup.AddIngressRule(Peer.Ipv4(subnet1.Ipv4CidrBlock), Port.HTTP, $"Allow HTTP from {subnet1.Ipv4CidrBlock}");
-            securityGroup.AddIngressRule(Peer.Ipv4(subnet2.Ipv4CidrBlock), Port.HTTP, $"Allow HTTP from {subnet2.Ipv4CidrBlock}");
+            securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTP, $"Allow HTTP from {subnetCidr1}");
+            securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTP, $"Allow HTTP from {subnetCidr2}");
             // Se crean reglas de ingress para HTTPS desde redes privadas...
-            securityGroup.AddIngressRule(Peer.Ipv4(subnet1.Ipv4CidrBlock), Port.HTTPS, $"Allow HTTPS from {subnet1.Ipv4CidrBlock}");
-            securityGroup.AddIngressRule(Peer.Ipv4(subnet2.Ipv4CidrBlock), Port.HTTPS, $"Allow HTTPS from {subnet2.Ipv4CidrBlock}");
+            securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTPS, $"Allow HTTPS from {subnetCidr1}");
+            securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTPS, $"Allow HTTPS from {subnetCidr2}");
             // Se crean reglas de egress para HTTP y HTTPS a internet...
             securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTP, "Allow HTTP to anywhere");
             securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTPS, "Allow HTTPS to anywhere");
