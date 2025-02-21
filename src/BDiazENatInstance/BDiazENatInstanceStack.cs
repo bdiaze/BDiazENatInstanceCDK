@@ -11,6 +11,8 @@ namespace BDiazENatInstance
             string vpcId = System.Environment.GetEnvironmentVariable("VPC_ID");
             string subnetId1 = System.Environment.GetEnvironmentVariable("SUBNET_ID_1")!;
             string subnetId2 = System.Environment.GetEnvironmentVariable("SUBNET_ID_2")!;
+            string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1")!;
+            string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2")!;
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID")!;
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE");
             string imageName = System.Environment.GetEnvironmentVariable("IMAGE_NAME");
@@ -21,8 +23,14 @@ namespace BDiazENatInstance
             });
 
             //Se obtienen referencias a las subredes privadas...
-            ISubnet subnet1 = Subnet.FromSubnetId(this, $"{appName}Subnet1", subnetId1);
-            ISubnet subnet2 = Subnet.FromSubnetId(this, $"{appName}Subnet2", subnetId2);
+            ISubnet subnet1 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet1", new SubnetAttributes { 
+                SubnetId = subnetId1,
+                Ipv4CidrBlock = subnetCidr1,
+            });
+            ISubnet subnet2 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet2", new SubnetAttributes { 
+                SubnetId = subnetId2,
+                Ipv4CidrBlock = subnetCidr2
+            });
 
             // Se crea User Data para la instancia...
             UserData userData = UserData.ForLinux();

@@ -21,6 +21,8 @@ jobs:
             VPC_ID: ${{ vars.VPC_ID }}
             SUBNET_ID_1: ${{ vars.SUBNET_ID_1 }}
             SUBNET_ID_2: ${{ vars.SUBNET_ID_2 }}
+            SUBNET_CIDR_1: ${{ vars.SUBNET_CIDR_1 }}
+            SUBNET_CIDR_2: ${{ vars.SUBNET_CIDR_2 }}
             ROUTE_TABLE_ID: ${{ vars.ROUTE_TABLE_ID }}
             INSTANCE_TYPE: ${{ vars.INSTANCE_TYPE }}
             IMAGE_NAME: ${{ vars.IMAGE_NAME }}
