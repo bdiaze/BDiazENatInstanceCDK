@@ -23,6 +23,8 @@ jobs:
             SUBNET_ID_2: ${{ vars.SUBNET_ID_2 }}
             SUBNET_CIDR_1: ${{ vars.SUBNET_CIDR_1 }}
             SUBNET_CIDR_2: ${{ vars.SUBNET_CIDR_2 }}
+            SUBNET_AZ_1: ${{ vars.SUBNET_AZ_1 }}
+            SUBNET_AZ_2: ${{ vars.SUBNET_AZ_2 }}
             ROUTE_TABLE_ID: ${{ vars.ROUTE_TABLE_ID }}
             INSTANCE_TYPE: ${{ vars.INSTANCE_TYPE }}
             IMAGE_NAME: ${{ vars.IMAGE_NAME }}

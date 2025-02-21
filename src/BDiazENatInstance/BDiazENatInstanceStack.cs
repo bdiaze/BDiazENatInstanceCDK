@@ -13,6 +13,8 @@ namespace BDiazENatInstance
             string subnetId2 = System.Environment.GetEnvironmentVariable("SUBNET_ID_2")!;
             string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1")!;
             string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2")!;
+            string subnetAz1 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_1")!;
+            string subnetAz2 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_2")!;
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID")!;
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE");
             string imageName = System.Environment.GetEnvironmentVariable("IMAGE_NAME");
@@ -26,10 +28,12 @@ namespace BDiazENatInstance
             ISubnet subnet1 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet1", new SubnetAttributes { 
                 SubnetId = subnetId1,
                 Ipv4CidrBlock = subnetCidr1,
+                AvailabilityZone = subnetAz1,
             });
             ISubnet subnet2 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet2", new SubnetAttributes { 
                 SubnetId = subnetId2,
-                Ipv4CidrBlock = subnetCidr2
+                Ipv4CidrBlock = subnetCidr2,
+                AvailabilityZone = subnetAz2,
             });
 
             // Se crea User Data para la instancia...
@@ -78,7 +82,7 @@ namespace BDiazENatInstance
                 }),
                 Vpc = vpc,
                 VpcSubnets = new SubnetSelection {
-                    Subnets = [subnet1, subnet2]
+                    Subnets = [subnet1, subnet2],
                 },
                 UserData = userData,
                 SecurityGroup = securityGroup,
