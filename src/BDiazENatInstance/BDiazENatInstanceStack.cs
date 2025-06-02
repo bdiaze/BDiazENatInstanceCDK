@@ -64,15 +64,23 @@ namespace BDiazENatInstance
                 Description = $"Security Group for NAT Instance - {appName}",
                 AllowAllOutbound = false,
             });
-            // Se crean reglas de ingress para HTTP desde redes privadas...
+            // Se crean reglas de ingress para HTTP desde redes privadas con internet...
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTP, $"Allow HTTP from {subnetCidr1}");
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTP, $"Allow HTTP from {subnetCidr2}");
-            // Se crean reglas de ingress para HTTPS desde redes privadas...
+            // Se crean reglas de ingress para HTTPS desde redes privadas con internet...
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTPS, $"Allow HTTPS from {subnetCidr1}");
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTPS, $"Allow HTTPS from {subnetCidr2}");
             // Se crean reglas de egress para HTTP y HTTPS a internet...
             securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTP, "Allow HTTP to anywhere");
             securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTPS, "Allow HTTPS to anywhere");
+
+            // Se crean reglas de ingress para SSH desde internet...
+            securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.SSH, $"Allow SSH from anywhere");
+
+            // Se crea Key Pair para conexiones SSH...
+            IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
+                KeyPairName = $"{appName}NatInstanceKeyPair",
+            });
 
             // Se crea la instancia NAT...
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
@@ -88,6 +96,7 @@ namespace BDiazENatInstance
                 UserData = userData,
                 SecurityGroup = securityGroup,
                 SourceDestCheck = false,
+                KeyPair = keyPair,
             });
 
             // Se actualizan las routes tables de las subnets privadas para apuntar a la instancia...
