@@ -78,7 +78,9 @@ namespace BDiazENatInstance
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
                 InstanceName = $"{appName}NatInstance",
                 InstanceType = new InstanceType(instanceType),
-                MachineImage = MachineImage.LatestAmazonLinux2023(),
+                MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps { 
+                    CpuType = AmazonLinuxCpuType.ARM_64,
+                }),
                 Vpc = vpc,
                 VpcSubnets = new SubnetSelection {
                     Subnets = [subnet1, subnet2],
