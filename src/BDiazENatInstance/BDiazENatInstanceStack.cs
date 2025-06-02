@@ -21,7 +21,6 @@ namespace BDiazENatInstance
 
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID")!;
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE");
-            string imageName = System.Environment.GetEnvironmentVariable("IMAGE_NAME");
 
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
@@ -79,9 +78,7 @@ namespace BDiazENatInstance
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
                 InstanceName = $"{appName}NatInstance",
                 InstanceType = new InstanceType(instanceType),
-                MachineImage = MachineImage.Lookup(new LookupMachineImageProps {
-                    Name = imageName
-                }),
+                MachineImage = MachineImage.LatestAmazonLinux2023(),
                 Vpc = vpc,
                 VpcSubnets = new SubnetSelection {
                     Subnets = [subnet1, subnet2],

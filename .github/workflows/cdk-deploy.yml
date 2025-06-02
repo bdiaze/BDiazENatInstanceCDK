@@ -28,7 +28,6 @@ jobs:
             SUBNET_AZ_2: ${{ vars.SUBNET_AZ_2 }}
             ROUTE_TABLE_ID: ${{ vars.ROUTE_TABLE_ID }}
             INSTANCE_TYPE: ${{ vars.INSTANCE_TYPE }}
-            IMAGE_NAME: ${{ vars.IMAGE_NAME }}
         steps:
             - name: Checkout Repositorio
               uses: actions/checkout@v4
