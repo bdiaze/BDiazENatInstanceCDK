@@ -41,10 +41,10 @@ namespace BDiazENatInstance
             UserData userData = UserData.ForLinux();
             userData.AddCommands(
                 // Se actualizan paquetes
-                "dnf upgrade",
+                "dnf upgrade -y",
 
                 // Se instala iptables...
-                "dnf install iptables-services",
+                "dnf install -y iptables-services",
                 "systemctl enable iptables",
                 "systemctl start iptables",
 
@@ -60,7 +60,7 @@ namespace BDiazENatInstance
                 "service iptables save",
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
-                "dnf install nginx",
+                "dnf install -y nginx",
                 "systemctl enable nginx",
                 "systemctl start nginx",
 
@@ -96,7 +96,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair3",
             });
 
             // Se crea la instancia NAT...
