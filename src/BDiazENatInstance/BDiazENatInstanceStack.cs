@@ -40,8 +40,11 @@ namespace BDiazENatInstance
             // Se crea User Data para la instancia...
             UserData userData = UserData.ForLinux();
             userData.AddCommands(
+                // Se actualizan paquetes
+                "dnf upgrade",
+
                 // Se instala iptables...
-                "yum install -y iptables-services",
+                "dnf install iptables-services",
                 "systemctl enable iptables",
                 "systemctl start iptables",
 
@@ -57,7 +60,7 @@ namespace BDiazENatInstance
                 "service iptables save",
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
-                "yum install -y nginx",
+                "dnf install nginx",
                 "systemctl enable nginx",
                 "systemctl start nginx"
             );
