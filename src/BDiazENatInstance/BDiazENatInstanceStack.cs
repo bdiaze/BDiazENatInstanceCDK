@@ -54,14 +54,19 @@ namespace BDiazENatInstance
                 // Se crea regla de ruteo y enmascaramiento de IP privada...
                 "iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE",
                 "iptables -F FORWARD",
-                "service iptables save"
+                "service iptables save",
+
+                // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
+                "yum install -y nginx",
+                "systemctl enable nginx",
+                "systemctl start nginx"
             );
 
             // Se crea security group...
             ISecurityGroup securityGroup = new SecurityGroup(this, $"{appName}NatInstanceSecurityGroup", new SecurityGroupProps {
                 Vpc = vpc,
-                SecurityGroupName = $"{appName}NatInstanceSecurityGroup",
-                Description = $"Security Group for NAT Instance - {appName}",
+                SecurityGroupName = $"{appName}NatInstanceAndWebServerSecurityGroup",
+                Description = $"Security Group for NAT Instance and Web Server - {appName}",
                 AllowAllOutbound = false,
             });
             // Se crean reglas de ingress para HTTP desde redes privadas con internet...
@@ -77,14 +82,18 @@ namespace BDiazENatInstance
             // Se crean reglas de ingress para SSH desde internet...
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.SSH, $"Allow SSH from anywhere");
 
+            // Se crean reglas para aplicaciones web...
+            securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.HTTP, $"Allow HTTP from anywhere");
+            securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.HTTPS, $"Allow HTTPS from anywhere");
+
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
-                KeyPairName = $"{appName}NatInstanceKeyPair",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             // Se crea la instancia NAT...
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
-                InstanceName = $"{appName}NatInstance",
+                InstanceName = $"{appName}NatInstanceAndWebServer",
                 InstanceType = new InstanceType(instanceType),
                 MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps { 
                     CpuType = AmazonLinuxCpuType.ARM_64,
