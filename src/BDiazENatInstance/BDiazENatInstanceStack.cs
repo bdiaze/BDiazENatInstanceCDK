@@ -96,12 +96,12 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
             });
 
             // Se crea la instancia NAT...
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
-                InstanceName = $"{appName}NatInstanceAndWebServer2",
+                InstanceName = $"{appName}NatInstanceAndWebServer",
                 InstanceType = new InstanceType(instanceType),
                 MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps { 
                     CpuType = AmazonLinuxCpuType.ARM_64,
