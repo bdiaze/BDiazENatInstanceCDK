@@ -56,7 +56,7 @@ namespace BDiazENatInstance
 
                 // Se crea regla de ruteo y enmascaramiento de IP privada...
                 "iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE",
-                //"iptables -F FORWARD",
+                "iptables -F FORWARD",
                 "service iptables save",
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
@@ -96,7 +96,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair3",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             // Se crea la instancia NAT...
