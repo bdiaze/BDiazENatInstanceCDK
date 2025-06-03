@@ -62,7 +62,12 @@ namespace BDiazENatInstance
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
                 "dnf install nginx",
                 "systemctl enable nginx",
-                "systemctl start nginx"
+                "systemctl start nginx",
+
+                // Se crea regla para aceptar HTTP y HTTPS...
+                "iptables -A INPUT -p tcp --dport 80 -j ACCEPT",
+                "iptables -A INPUT -p tcp --dport 443 -j ACCEPT",
+                "service iptables save"
             );
 
             // Se crea security group...
