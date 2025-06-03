@@ -56,7 +56,7 @@ namespace BDiazENatInstance
 
                 // Se crea regla de ruteo y enmascaramiento de IP privada...
                 "iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE",
-                "iptables -F FORWARD",
+                //"iptables -F FORWARD",
                 "service iptables save",
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
@@ -65,8 +65,8 @@ namespace BDiazENatInstance
                 "systemctl start nginx",
 
                 // Se crea regla para aceptar HTTP y HTTPS...
-                "iptables -A INPUT -p tcp --dport 80 -j ACCEPT",
-                "iptables -A INPUT -p tcp --dport 443 -j ACCEPT",
+                "iptables -I INPUT 5 -m state --state NEW  -p tcp --dport 80 -j ACCEPT",
+                "iptables -I INPUT 6 -m state --state NEW  -p tcp --dport 443 -j ACCEPT",
                 "service iptables save"
             );
 
