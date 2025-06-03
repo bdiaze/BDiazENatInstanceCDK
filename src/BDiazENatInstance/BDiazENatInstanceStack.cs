@@ -101,7 +101,7 @@ namespace BDiazENatInstance
 
             // Se crea la instancia NAT...
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
-                InstanceName = $"{appName}NatInstanceAndWebServer",
+                InstanceName = $"{appName}NatInstanceAndWebServer2",
                 InstanceType = new InstanceType(instanceType),
                 MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps { 
                     CpuType = AmazonLinuxCpuType.ARM_64,
