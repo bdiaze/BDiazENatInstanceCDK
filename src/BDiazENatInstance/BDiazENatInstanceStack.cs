@@ -146,7 +146,11 @@ namespace BDiazENatInstance
                 Comment = $"{appName} Web Server Distribution",
                 DomainNames = [subdomainName],
                 DefaultBehavior = new BehaviorOptions {
-                    Origin = new HttpOrigin(natInstance.InstancePublicDnsName),
+                    Origin = new HttpOrigin(natInstance.InstancePublicDnsName, new HttpOriginProps { 
+                        OriginId = $"{appName}WebServerOrigin",
+                        ProtocolPolicy = OriginProtocolPolicy.MATCH_VIEWER,
+                    }),
+                    OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER,
                     AllowedMethods = AllowedMethods.ALLOW_ALL,
                     ViewerProtocolPolicy = ViewerProtocolPolicy.ALLOW_ALL,
                 },
