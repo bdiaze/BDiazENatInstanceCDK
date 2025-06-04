@@ -1,26 +1,37 @@
 using Amazon.CDK;
+using Amazon.CDK.AWS.CertificateManager;
+using Amazon.CDK.AWS.CloudFront;
+using Amazon.CDK.AWS.CloudFront.Origins;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.Route53;
+using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
+using System;
 
 namespace BDiazENatInstance
 {
     public class BDiazENatInstanceStack : Stack
     {
         internal BDiazENatInstanceStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props) {
-            string appName = System.Environment.GetEnvironmentVariable("APP_NAME")!;
-            string vpcId = System.Environment.GetEnvironmentVariable("VPC_ID");
+            string appName = System.Environment.GetEnvironmentVariable("APP_NAME") ?? throw new ArgumentNullException("APP_NAME");
+            string vpcId = System.Environment.GetEnvironmentVariable("VPC_ID") ?? throw new ArgumentNullException("VPC_ID");
             // Subnets públicas para instancia NAT...
-            string subnetId1 = System.Environment.GetEnvironmentVariable("SUBNET_ID_1")!;
-            string subnetId2 = System.Environment.GetEnvironmentVariable("SUBNET_ID_2")!;
-            string subnetAz1 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_1")!;
-            string subnetAz2 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_2")!;
+            string subnetId1 = System.Environment.GetEnvironmentVariable("SUBNET_ID_1") ?? throw new ArgumentNullException("SUBNET_ID_1");
+            string subnetId2 = System.Environment.GetEnvironmentVariable("SUBNET_ID_2") ?? throw new ArgumentNullException("SUBNET_ID_2");
+            string subnetAz1 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_1") ?? throw new ArgumentNullException("SUBNET_AZ_1");
+            string subnetAz2 = System.Environment.GetEnvironmentVariable("SUBNET_AZ_2") ?? throw new ArgumentNullException("SUBNET_AZ_2");
 
             // CIDR de subnet privada para reglas de ingress de security group...
-            string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1")!;
-            string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2")!;
+            string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1") ?? throw new ArgumentNullException("SUBNET_CIDR_1");
+            string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2") ?? throw new ArgumentNullException("SUBNET_CIDR_2");
 
-            string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID")!;
-            string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE");
+            string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID") ?? throw new ArgumentNullException("ROUTE_TABLE_ID");
+            string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE") ?? throw new ArgumentNullException("INSTANCE_TYPE");
+
+            // Certificado y Domain/Subdomain para distribución de cloudfront...
+            string certificateArn = System.Environment.GetEnvironmentVariable("CERTIFICATE_ARN") ?? throw new ArgumentNullException("CERTIFICATE_ARN");
+            string domainName = System.Environment.GetEnvironmentVariable("DOMAIN_NAME") ?? throw new ArgumentNullException("DOMAIN_NAME");
+            string subdomainName = System.Environment.GetEnvironmentVariable("SUBDOMAIN_NAME") ?? throw new ArgumentNullException("SUBDOMAIN_NAME");
 
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
@@ -28,11 +39,11 @@ namespace BDiazENatInstance
             });
 
             //Se obtienen referencias a las subredes públicas...
-            ISubnet subnet1 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet1", new SubnetAttributes { 
+            ISubnet subnet1 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet1", new SubnetAttributes {
                 SubnetId = subnetId1,
                 AvailabilityZone = subnetAz1,
             });
-            ISubnet subnet2 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet2", new SubnetAttributes { 
+            ISubnet subnet2 = Subnet.FromSubnetAttributes(this, $"{appName}Subnet2", new SubnetAttributes {
                 SubnetId = subnetId2,
                 AvailabilityZone = subnetAz2,
             });
@@ -95,7 +106,7 @@ namespace BDiazENatInstance
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.HTTPS, $"Allow HTTPS from anywhere");
 
             // Se crea Key Pair para conexiones SSH...
-            IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps { 
+            IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
                 KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
@@ -103,7 +114,7 @@ namespace BDiazENatInstance
             Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
                 InstanceName = $"{appName}NatInstanceAndWebServer",
                 InstanceType = new InstanceType(instanceType),
-                MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps { 
+                MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps {
                     CpuType = AmazonLinuxCpuType.ARM_64,
                 }),
                 Vpc = vpc,
@@ -121,6 +132,32 @@ namespace BDiazENatInstance
                 RouteTableId = routeTableId,
                 DestinationCidrBlock = "0.0.0.0/0",
                 InstanceId = natInstance.InstanceId,
+            });
+
+
+            ICertificate certificate = Certificate.FromCertificateArn(this, $"{appName}WebServerCertificate", certificateArn);
+
+            IHostedZone hostedZone = HostedZone.FromLookup(this, $"{appName}WebServerHostedZone", new HostedZoneProviderProps {
+                DomainName = domainName
+            });
+
+            // Se crea distribución cloudfront para instancia de web server...
+            Distribution distribution = new(this, $"{appName}WebServerDistribution", new DistributionProps {
+                Comment = $"{appName} Web Server Distribution",
+                DomainNames = [subdomainName],
+                DefaultBehavior = new BehaviorOptions {
+                    Origin = new HttpOrigin(natInstance.InstancePublicDnsName),
+                    AllowedMethods = AllowedMethods.ALLOW_ALL,
+                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                },
+                Certificate = certificate
+            });
+
+            // Se crea record en hosted zone...
+            _ = new ARecord(this, $"{appName}WebServerARecord", new ARecordProps {
+                Zone = hostedZone,
+                RecordName = subdomainName,
+                Target = RecordTarget.FromAlias(new CloudFrontTarget(distribution))
             });
         }
     }
