@@ -148,9 +148,9 @@ namespace BDiazENatInstance
                 DefaultBehavior = new BehaviorOptions {
                     Origin = new HttpOrigin(natInstance.InstancePublicDnsName),
                     AllowedMethods = AllowedMethods.ALLOW_ALL,
-                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                    ViewerProtocolPolicy = ViewerProtocolPolicy.ALLOW_ALL,
                 },
-                Certificate = certificate
+                Certificate = certificate,
             });
 
             // Se crea record en hosted zone...
