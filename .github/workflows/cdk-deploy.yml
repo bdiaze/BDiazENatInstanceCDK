@@ -31,6 +31,7 @@ jobs:
             CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
             DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
             SUBDOMAIN_NAME: ${{ vars.SUBDOMAIN_NAME }}
+            CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
         steps:
             - name: Checkout Repositorio
               uses: actions/checkout@v4
