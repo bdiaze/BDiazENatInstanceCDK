@@ -33,9 +33,6 @@ namespace BDiazENatInstance
             string domainName = System.Environment.GetEnvironmentVariable("DOMAIN_NAME") ?? throw new ArgumentNullException("DOMAIN_NAME");
             string subdomainName = System.Environment.GetEnvironmentVariable("SUBDOMAIN_NAME") ?? throw new ArgumentNullException("SUBDOMAIN_NAME");
 
-            // Parámetros para configuración de Certbot...
-            string certbotEmail = System.Environment.GetEnvironmentVariable("CERTBOT_EMAIL") ?? throw new ArgumentNullException("CERTBOT_EMAIL");
-
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
                 VpcId = vpcId
@@ -81,15 +78,7 @@ namespace BDiazENatInstance
                 // Se crea regla para aceptar HTTP y HTTPS...
                 "iptables -I INPUT 5 -m state --state NEW  -p tcp --dport 80 -j ACCEPT",
                 "iptables -I INPUT 6 -m state --state NEW  -p tcp --dport 443 -j ACCEPT",
-                "service iptables save",
-
-                // Se instala certbot para configurar SSL...
-                "dnf install -y python3 python-devel augeas-devel gcc",
-                "python3 -m venv /opt/certbot/",
-                "/opt/certbot/bin/pip install --upgrade pip",
-                "/opt/certbot/bin/pip install certbot certbot-nginx",
-                "ln -s /opt/certbot/bin/certbot /usr/bin/certbot",
-                $"certbot --nginx -d {subdomainName} -m {certbotEmail} --agree-tos --non-interactive --pre-hook \"systemctl stop nginx\" --post-hook \"systemctl start nginx\""
+                "service iptables save"
             );
 
             // Se crea security group...
@@ -118,7 +107,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             // Se crea la instancia NAT...
@@ -159,11 +148,11 @@ namespace BDiazENatInstance
                 DefaultBehavior = new BehaviorOptions {
                     Origin = new HttpOrigin(natInstance.InstancePublicDnsName, new HttpOriginProps { 
                         OriginId = $"{appName}WebServerOrigin",
-                        ProtocolPolicy = OriginProtocolPolicy.MATCH_VIEWER,
+                        ProtocolPolicy = OriginProtocolPolicy.HTTP_ONLY,
                     }),
                     OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER,
                     AllowedMethods = AllowedMethods.ALLOW_ALL,
-                    ViewerProtocolPolicy = ViewerProtocolPolicy.ALLOW_ALL,
+                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 },
                 Certificate = certificate,
             });
