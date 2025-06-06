@@ -92,8 +92,19 @@ namespace BDiazENatInstance
                 "/opt/certbot/bin/pip install certbot certbot-nginx",
                 "ln -s /opt/certbot/bin/certbot /usr/bin/certbot",
                 $"certbot --nginx -d {subdomainName} -m {certbotEmail} --agree-tos --non-interactive",
+                "systemctl reload nginx",
 
-                "systemctl reload nginx"
+                // Se crea configura crond para la autorenovación del certificado...
+                "dnf install -y cronie",
+                "systemctl enable crond",
+                "systemctl start crond",
+                "echo '0 */12 * * * root /usr/bin/certbot renew --quiet' | tee /etc/cron.d/certbot",
+                "systemctl reload crond",
+
+                // Se crea hook script para recargar nginx al renovar el certificado...
+                "echo '#!/bin/bash' | tee /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh",
+                "echo 'systemctl reload nginx' | tee -a /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh",
+                "chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh"
             );
 
             // Se crea security group...
@@ -122,7 +133,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
             });
 
             // Se crea la instancia NAT...
