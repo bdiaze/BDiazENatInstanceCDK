@@ -79,6 +79,8 @@ namespace BDiazENatInstance
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
                 "dnf install -y nginx",
+                "systemctl enable nginx",
+                "systemctl start nginx",
 
                 // Se cambia el server_name de nginx según el subdomainName a utilizar...
                 $"sed -i 's/server_name  _;/server_name  {subdomainName};/g' /etc/nginx/nginx.conf",
@@ -91,8 +93,7 @@ namespace BDiazENatInstance
                 "ln -s /opt/certbot/bin/certbot /usr/bin/certbot",
                 $"certbot --nginx -d {subdomainName} -m {certbotEmail} --agree-tos --non-interactive",
 
-                "systemctl enable nginx",
-                "systemctl start nginx"
+                "systemctl reload nginx"
             );
 
             // Se crea security group...
@@ -121,7 +122,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             // Se crea la instancia NAT...
@@ -148,34 +149,15 @@ namespace BDiazENatInstance
                 InstanceId = natInstance.InstanceId,
             });
 
-
-            ICertificate certificate = Certificate.FromCertificateArn(this, $"{appName}WebServerCertificate", certificateArn);
-
             IHostedZone hostedZone = HostedZone.FromLookup(this, $"{appName}WebServerHostedZone", new HostedZoneProviderProps {
                 DomainName = domainName
-            });
-
-            // Se crea distribución cloudfront para instancia de web server...
-            Distribution distribution = new(this, $"{appName}WebServerDistribution", new DistributionProps {
-                Comment = $"{appName} Web Server Distribution",
-                DomainNames = [subdomainName],
-                DefaultBehavior = new BehaviorOptions {
-                    Origin = new HttpOrigin(natInstance.InstancePublicDnsName, new HttpOriginProps { 
-                        OriginId = $"{appName}WebServerOrigin",
-                        ProtocolPolicy = OriginProtocolPolicy.HTTPS_ONLY,
-                    }),
-                    OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER,
-                    AllowedMethods = AllowedMethods.ALLOW_ALL,
-                    ViewerProtocolPolicy = ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                },
-                Certificate = certificate,
             });
 
             // Se crea record en hosted zone...
             _ = new ARecord(this, $"{appName}WebServerARecord", new ARecordProps {
                 Zone = hostedZone,
                 RecordName = subdomainName,
-                Target = RecordTarget.FromAlias(new CloudFrontTarget(distribution))
+                Target = RecordTarget.FromIpAddresses(natInstance.InstancePublicIp)
             });
         }
     }
