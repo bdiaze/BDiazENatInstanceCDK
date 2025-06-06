@@ -137,7 +137,7 @@ namespace BDiazENatInstance
             });
 
             // Se crea la instancia NAT...
-            Instance_ natInstance = new Instance_(this, $"{appName}NatInstance", new InstanceProps {
+            Instance_ natInstance = new(this, $"{appName}NatInstance", new InstanceProps {
                 InstanceName = $"{appName}NatInstanceAndWebServer",
                 InstanceType = new InstanceType(instanceType),
                 MachineImage = MachineImage.LatestAmazonLinux2023(new AmazonLinux2023ImageSsmParameterProps {
@@ -153,11 +153,12 @@ namespace BDiazENatInstance
                 KeyPair = keyPair,
             });
 
-            // Se actualizan las routes tables de las subnets privadas para apuntar a la instancia...
-            new CfnRoute(this, $"{appName}NatInstanceRoute", new CfnRouteProps {
-                RouteTableId = routeTableId,
-                DestinationCidrBlock = "0.0.0.0/0",
-                InstanceId = natInstance.InstanceId,
+            // Se crea una IP elastica para la instancia y el DNS...
+            CfnEIP elasticIp = new(this, $"{appName}ElasticIP", new CfnEIPProps { });
+
+            _ = new CfnEIPAssociation(this, $"", new CfnEIPAssociationProps { 
+                AllocationId = elasticIp.AttrAllocationId,
+                InstanceId = natInstance.InstanceId
             });
 
             IHostedZone hostedZone = HostedZone.FromLookup(this, $"{appName}WebServerHostedZone", new HostedZoneProviderProps {
@@ -168,7 +169,14 @@ namespace BDiazENatInstance
             _ = new ARecord(this, $"{appName}WebServerARecord", new ARecordProps {
                 Zone = hostedZone,
                 RecordName = subdomainName,
-                Target = RecordTarget.FromIpAddresses(natInstance.InstancePublicIp)
+                Target = RecordTarget.FromIpAddresses(elasticIp.Ref)
+            });
+
+            // Se actualizan las routes tables de las subnets privadas para apuntar a la instancia...
+            new CfnRoute(this, $"{appName}NatInstanceRoute", new CfnRouteProps {
+                RouteTableId = routeTableId,
+                DestinationCidrBlock = "0.0.0.0/0",
+                InstanceId = natInstance.InstanceId,
             });
         }
     }
