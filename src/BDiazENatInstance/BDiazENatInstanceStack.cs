@@ -156,7 +156,7 @@ namespace BDiazENatInstance
             // Se crea una IP elastica para la instancia y el DNS...
             CfnEIP elasticIp = new(this, $"{appName}ElasticIP", new CfnEIPProps { });
 
-            _ = new CfnEIPAssociation(this, $"", new CfnEIPAssociationProps { 
+            _ = new CfnEIPAssociation(this, $"{appName}ElasticIPAssociation", new CfnEIPAssociationProps { 
                 AllocationId = elasticIp.AttrAllocationId,
                 InstanceId = natInstance.InstanceId
             });
