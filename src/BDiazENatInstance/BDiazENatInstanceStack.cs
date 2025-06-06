@@ -33,6 +33,9 @@ namespace BDiazENatInstance
             string domainName = System.Environment.GetEnvironmentVariable("DOMAIN_NAME") ?? throw new ArgumentNullException("DOMAIN_NAME");
             string subdomainName = System.Environment.GetEnvironmentVariable("SUBDOMAIN_NAME") ?? throw new ArgumentNullException("SUBDOMAIN_NAME");
 
+            // Parámetros para configuración de Certbot...
+            string certbotEmail = System.Environment.GetEnvironmentVariable("CERTBOT_EMAIL") ?? throw new ArgumentNullException("CERTBOT_EMAIL");
+
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
                 VpcId = vpcId
@@ -68,17 +71,28 @@ namespace BDiazENatInstance
                 // Se crea regla de ruteo y enmascaramiento de IP privada...
                 "iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE",
                 "iptables -F FORWARD",
-                "service iptables save",
-
-                // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
-                "dnf install -y nginx",
-                "systemctl enable nginx",
-                "systemctl start nginx",
 
                 // Se crea regla para aceptar HTTP y HTTPS...
                 "iptables -I INPUT 5 -m state --state NEW  -p tcp --dport 80 -j ACCEPT",
                 "iptables -I INPUT 6 -m state --state NEW  -p tcp --dport 443 -j ACCEPT",
-                "service iptables save"
+                "service iptables save",
+
+                // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
+                "dnf install -y nginx",
+
+                // Se cambia el server_name de nginx según el subdomainName a utilizar...
+                $"sed -i 's/server_name  _;/server_name  {subdomainName};/g' /etc/nginx/nginx.conf",
+
+                // Se genera certificados para HTTPS
+                "dnf install -y python3 python-devel augeas-devel gcc",
+                "python3 -m venv /opt/certbot/",
+                "/opt/certbot/bin/pip install --upgrade pip",
+                "/opt/certbot/bin/pip install certbot certbot-nginx",
+                "ln -s /opt/certbot/bin/certbot /usr/bin/certbot",
+                $"certbot --nginx -d {subdomainName} -m {certbotEmail} --agree-tos --non-interactive",
+
+                "systemctl enable nginx",
+                "systemctl start nginx"
             );
 
             // Se crea security group...
@@ -107,7 +121,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
             });
 
             // Se crea la instancia NAT...
@@ -148,7 +162,7 @@ namespace BDiazENatInstance
                 DefaultBehavior = new BehaviorOptions {
                     Origin = new HttpOrigin(natInstance.InstancePublicDnsName, new HttpOriginProps { 
                         OriginId = $"{appName}WebServerOrigin",
-                        ProtocolPolicy = OriginProtocolPolicy.HTTP_ONLY,
+                        ProtocolPolicy = OriginProtocolPolicy.HTTPS_ONLY,
                     }),
                     OriginRequestPolicy = OriginRequestPolicy.ALL_VIEWER,
                     AllowedMethods = AllowedMethods.ALLOW_ALL,
