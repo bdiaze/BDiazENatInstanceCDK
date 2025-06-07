@@ -133,7 +133,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             // Se crea la instancia NAT...
