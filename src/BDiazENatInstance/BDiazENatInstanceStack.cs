@@ -137,7 +137,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
             Role role = new(this, $"{appName}NatInstanceRole", new RoleProps { 
