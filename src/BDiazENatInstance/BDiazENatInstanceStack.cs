@@ -59,6 +59,8 @@ namespace BDiazENatInstance
 
                 // Se instala agente de cloudwatch...
                 "dnf install -y amazon-cloudwatch-agent",
+                "echo \"{ \\\" agent\\\" : { \\\" metrics_collection_interval\\\" : 60, \\\" run_as_user\\\" : \\\" cwagent\\\"  }, \\\" metrics\\\" : { \\\" metrics_collected\\\" : { \\\" disk\\\" : { \\\" measurement\\\" : [ \\\" used_percent\\\"  ], \\\" metrics_collection_interval\\\" : 60, \\\" resources\\\" : [ \\\" *\\\"  ] }, \\\" mem\\\" : { \\\" measurement\\\" : [ \\\" mem_used_percent\\\"  ], \\\" metrics_collection_interval\\\" : 60 } } } }\" > /opt/aws/amazon-cloudwatch-agent/bin/config.json",
+                "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json",
 
                 // Se instala iptables...
                 "dnf install -y iptables-services",
@@ -144,6 +146,7 @@ namespace BDiazENatInstance
                 AssumedBy = new ServicePrincipal("ec2.amazonaws.com"),
                 ManagedPolicies = [
                     ManagedPolicy.FromAwsManagedPolicyName("CloudWatchAgentServerPolicy"),
+                    ManagedPolicy.FromAwsManagedPolicyName("AmazonSSMManagedInstanceCore"),
                 ]
             });
 
@@ -163,6 +166,7 @@ namespace BDiazENatInstance
                 SourceDestCheck = false,
                 KeyPair = keyPair,
                 Role = role,
+                DetailedMonitoring = true,
             });
 
             // Se crea una IP elastica para la instancia y el DNS...
