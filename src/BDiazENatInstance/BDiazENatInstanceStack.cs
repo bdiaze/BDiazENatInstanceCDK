@@ -3,6 +3,7 @@ using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.CloudFront.Origins;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
 using Constructs;
@@ -28,8 +29,7 @@ namespace BDiazENatInstance
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID") ?? throw new ArgumentNullException("ROUTE_TABLE_ID");
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE") ?? throw new ArgumentNullException("INSTANCE_TYPE");
 
-            // Certificado y Domain/Subdomain para distribución de cloudfront...
-            string certificateArn = System.Environment.GetEnvironmentVariable("CERTIFICATE_ARN") ?? throw new ArgumentNullException("CERTIFICATE_ARN");
+            // Domain/Subdomain para DNS...
             string domainName = System.Environment.GetEnvironmentVariable("DOMAIN_NAME") ?? throw new ArgumentNullException("DOMAIN_NAME");
             string subdomainName = System.Environment.GetEnvironmentVariable("SUBDOMAIN_NAME") ?? throw new ArgumentNullException("SUBDOMAIN_NAME");
 
@@ -54,8 +54,11 @@ namespace BDiazENatInstance
             // Se crea User Data para la instancia...
             UserData userData = UserData.ForLinux();
             userData.AddCommands(
-                // Se actualizan paquetes
+                // Se actualizan paquetes...
                 "dnf upgrade -y",
+
+                // Se instala agente de cloudwatch...
+                "dnf install -y amazon-cloudwatch-agent",
 
                 // Se instala iptables...
                 "dnf install -y iptables-services",
@@ -112,7 +115,6 @@ namespace BDiazENatInstance
                 Vpc = vpc,
                 SecurityGroupName = $"{appName}NatInstanceAndWebServerSecurityGroup",
                 Description = $"Security Group for NAT Instance and Web Server - {appName}",
-                AllowAllOutbound = false,
             });
             // Se crean reglas de ingress para HTTP desde redes privadas con internet...
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTP, $"Allow HTTP from {subnetCidr1}");
@@ -121,8 +123,8 @@ namespace BDiazENatInstance
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTPS, $"Allow HTTPS from {subnetCidr1}");
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTPS, $"Allow HTTPS from {subnetCidr2}");
             // Se crean reglas de egress para HTTP y HTTPS a internet...
-            securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTP, "Allow HTTP to anywhere");
-            securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTPS, "Allow HTTPS to anywhere");
+            // securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTP, "Allow HTTP to anywhere");
+            // securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTPS, "Allow HTTPS to anywhere");
 
             // Se crean reglas de ingress para SSH desde internet...
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.SSH, $"Allow SSH from anywhere");
@@ -134,6 +136,15 @@ namespace BDiazENatInstance
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
                 KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
+            });
+
+            Role role = new(this, $"{appName}NatInstanceRole", new RoleProps { 
+                RoleName = $"{appName}NatInstanceAndWebServerRole",
+                Description = $"Role para Instancia NAT y Web Server de {appName}",
+                AssumedBy = new ServicePrincipal("ec2.amazonaws.com"),
+                ManagedPolicies = [
+                    ManagedPolicy.FromAwsManagedPolicyName("CloudWatchAgentServerPolicy"),
+                ]
             });
 
             // Se crea la instancia NAT...
@@ -151,6 +162,7 @@ namespace BDiazENatInstance
                 SecurityGroup = securityGroup,
                 SourceDestCheck = false,
                 KeyPair = keyPair,
+                Role = role,
             });
 
             // Se crea una IP elastica para la instancia y el DNS...
