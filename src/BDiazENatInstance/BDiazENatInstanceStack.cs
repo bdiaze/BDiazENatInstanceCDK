@@ -59,7 +59,7 @@ namespace BDiazENatInstance
 
                 // Se instala agente de cloudwatch...
                 "dnf install -y amazon-cloudwatch-agent",
-                "echo \"{ \\\"agent\\\": { \\\"metrics_collection_interval\\\": 60, \\\"run_as_user\\\": \\\"cwagent\\\" }, \\\"metrics\\\": { \\\"aggregation_dimensions\\\": [ [ \\\"InstanceId\\\" ] ], \\\"metrics_collected\\\": { \\\"disk\\\": { \\\"measurement\\\": [ \\\"used_percent\\\" ], \\\"metrics_collection_interval\\\": 60, \\\"resources\\\": [ \\\"*\\\" ] }, \\\"mem\\\": { \\\"measurement\\\": [ \\\"mem_used_percent\\\" ], \\\"metrics_collection_interval\\\": 60 } } } }\" > /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
+                "echo '{ \"agent\": { \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }, \"metrics\": { \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": { \"AutoScalingGroupName\": \"${aws:AutoScalingGroupName}\", \"ImageId\": \"${aws:ImageId}\", \"InstanceId\": \"${aws:InstanceId}\", \"InstanceType\": \"${aws:InstanceType}\" }, \"metrics_collected\": { \"disk\": { \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }, \"mem\": { \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 } } } }' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
                 "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
 
                 // Se instala iptables...
@@ -137,7 +137,7 @@ namespace BDiazENatInstance
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {
-                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
+                KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair2",
             });
 
             Role role = new(this, $"{appName}NatInstanceRole", new RoleProps { 
