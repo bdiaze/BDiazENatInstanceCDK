@@ -6,8 +6,10 @@ using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
+using Amazon.CDK.AWS.S3;
 using Constructs;
 using System;
+using System.Collections.Generic;
 
 namespace BDiazENatInstance
 {
@@ -35,6 +37,9 @@ namespace BDiazENatInstance
 
             // Parámetros para configuración de Certbot...
             string certbotEmail = System.Environment.GetEnvironmentVariable("CERTBOT_EMAIL") ?? throw new ArgumentNullException("CERTBOT_EMAIL");
+
+            // Parámetros para habilitar accesos desde EC2 a servicios AWS...
+            string s3bucketArn = System.Environment.GetEnvironmentVariable("S3_BUCKET_ARN") ?? throw new ArgumentNullException("S3_BUCKET_ARN");
 
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
@@ -124,9 +129,6 @@ namespace BDiazENatInstance
             // Se crean reglas de ingress para HTTPS desde redes privadas con internet...
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr1), Port.HTTPS, $"Allow HTTPS from {subnetCidr1}");
             securityGroup.AddIngressRule(Peer.Ipv4(subnetCidr2), Port.HTTPS, $"Allow HTTPS from {subnetCidr2}");
-            // Se crean reglas de egress para HTTP y HTTPS a internet...
-            // securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTP, "Allow HTTP to anywhere");
-            // securityGroup.AddEgressRule(Peer.AnyIpv4(), Port.HTTPS, "Allow HTTPS to anywhere");
 
             // Se crean reglas de ingress para SSH desde internet...
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.SSH, $"Allow SSH from anywhere");
@@ -147,7 +149,25 @@ namespace BDiazENatInstance
                 ManagedPolicies = [
                     ManagedPolicy.FromAwsManagedPolicyName("CloudWatchAgentServerPolicy"),
                     ManagedPolicy.FromAwsManagedPolicyName("AmazonSSMManagedInstanceCore"),
-                ]
+                ],
+                InlinePolicies = new Dictionary<string, PolicyDocument> {
+                    {
+                        $"{appName}NatInstanceAndWebServerPolicy",
+                        new PolicyDocument(new PolicyDocumentProps {
+                            Statements = [
+                                new PolicyStatement(new PolicyStatementProps{
+                                    Sid = $"{appName}AccessToGetObject",
+                                    Actions = [
+                                        "s3:GetObject"
+                                    ],
+                                    Resources = [
+                                        $"{s3bucketArn}/*",
+                                    ],
+                                }),
+                            ]
+                        })
+                    }
+                }
             });
 
             // Se crea la instancia NAT...
@@ -196,7 +216,7 @@ namespace BDiazENatInstance
             });
 
             // Se actualizan las routes tables de las subnets privadas para apuntar a la instancia...
-            new CfnRoute(this, $"{appName}NatInstanceRoute", new CfnRouteProps {
+            _ = new CfnRoute(this, $"{appName}NatInstanceRoute", new CfnRouteProps {
                 RouteTableId = routeTableId,
                 DestinationCidrBlock = "0.0.0.0/0",
                 InstanceId = natInstance.InstanceId,
