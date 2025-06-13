@@ -16,6 +16,7 @@ namespace BDiazENatInstance
     public class BDiazENatInstanceStack : Stack
     {
         internal BDiazENatInstanceStack(Construct scope, string id, IStackProps props = null) : base(scope, id, props) {
+            string account = System.Environment.GetEnvironmentVariable("ACCOUNT_AWS") ?? throw new ArgumentNullException("ACCOUNT_AWS");
             string appName = System.Environment.GetEnvironmentVariable("APP_NAME") ?? throw new ArgumentNullException("APP_NAME");
             string vpcId = System.Environment.GetEnvironmentVariable("VPC_ID") ?? throw new ArgumentNullException("VPC_ID");
             // Subnets públicas para instancia NAT...
@@ -37,9 +38,6 @@ namespace BDiazENatInstance
 
             // Parámetros para configuración de Certbot...
             string certbotEmail = System.Environment.GetEnvironmentVariable("CERTBOT_EMAIL") ?? throw new ArgumentNullException("CERTBOT_EMAIL");
-
-            // Parámetros para habilitar accesos desde EC2 a servicios AWS...
-            string s3bucketArn = System.Environment.GetEnvironmentVariable("S3_BUCKET_ARN") ?? throw new ArgumentNullException("S3_BUCKET_ARN");
 
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
@@ -142,7 +140,7 @@ namespace BDiazENatInstance
                 KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
-            Role role = new(this, $"{appName}NatInstanceRole", new RoleProps { 
+            Role role = new(this, $"{appName}NatInstanceRole", new RoleProps {
                 RoleName = $"{appName}NatInstanceAndWebServerRole",
                 Description = $"Role para Instancia NAT y Web Server de {appName}",
                 AssumedBy = new ServicePrincipal("ec2.amazonaws.com"),
@@ -153,15 +151,15 @@ namespace BDiazENatInstance
                 InlinePolicies = new Dictionary<string, PolicyDocument> {
                     {
                         $"{appName}NatInstanceAndWebServerPolicy",
-                        new PolicyDocument(new PolicyDocumentProps {
+                        new PolicyDocument(new PolicyDocumentProps{
                             Statements = [
                                 new PolicyStatement(new PolicyStatementProps{
-                                    Sid = $"{appName}AccessToGetObject",
+                                    Sid = $"{appName}AssumeOtherRoles",
                                     Actions = [
-                                        "s3:GetObject"
+                                        "sts:AssumeRole"
                                     ],
                                     Resources = [
-                                        $"{s3bucketArn}/*",
+                                        $"arn:aws:iam::{account}:role/{appName}-NatInstanceWebServer-SubRole-*",
                                     ],
                                 }),
                             ]
