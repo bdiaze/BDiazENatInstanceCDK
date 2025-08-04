@@ -32,6 +32,7 @@ jobs:
             DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
             SUBDOMAIN_NAME: ${{ vars.SUBDOMAIN_NAME }}
             CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
+            NOTIFICATION_EMAILS: ${{ vars.NOTIFICATION_EMAILS }}
         steps:
             - name: Checkout Repositorio
               uses: actions/checkout@v4

@@ -2,11 +2,16 @@ using Amazon.CDK;
 using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.CloudFront;
 using Amazon.CDK.AWS.CloudFront.Origins;
+using Amazon.CDK.AWS.CloudWatch;
+using Amazon.CDK.AWS.CloudWatch.Actions;
 using Amazon.CDK.AWS.EC2;
+using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
 using Amazon.CDK.AWS.S3;
+using Amazon.CDK.AWS.SNS;
+using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
 using System;
 using System.Collections.Generic;
@@ -38,6 +43,9 @@ namespace BDiazENatInstance
 
             // Parámetros para configuración de Certbot...
             string certbotEmail = System.Environment.GetEnvironmentVariable("CERTBOT_EMAIL") ?? throw new ArgumentNullException("CERTBOT_EMAIL");
+
+            // Parámetros para configurar notificaciones...
+            string notificationEmails = System.Environment.GetEnvironmentVariable("NOTIFICATION_EMAILS") ?? throw new ArgumentNullException("NOTIFICATION_EMAILS");
 
             // Se obtiene referencia a la VPC...
             IVpc vpc = Vpc.FromLookup(this, "Vpc", new VpcLookupOptions {
@@ -116,7 +124,7 @@ namespace BDiazENatInstance
             );
 
             // Se crea security group...
-            ISecurityGroup securityGroup = new SecurityGroup(this, $"{appName}NatInstanceSecurityGroup", new SecurityGroupProps {
+            SecurityGroup securityGroup = new (this, $"{appName}NatInstanceSecurityGroup", new SecurityGroupProps {
                 Vpc = vpc,
                 SecurityGroupName = $"{appName}NatInstanceAndWebServerSecurityGroup",
                 Description = $"Security Group for NAT Instance and Web Server - {appName}",
@@ -219,6 +227,52 @@ namespace BDiazENatInstance
                 DestinationCidrBlock = "0.0.0.0/0",
                 InstanceId = natInstance.InstanceId,
             });
+
+            // Se crea SNS topic para notificaciones asociadas a la instancia...
+            Topic topic = new (this, $"{appName}NatInstanceSNSTopic", new TopicProps {
+                TopicName = $"{appName}NatInstanceSNSTopic",
+            });
+
+            foreach (string email in notificationEmails.Split(",")) {
+                topic.AddSubscription(new EmailSubscription(email));
+            }
+
+            // Se crean alarmas para la instancia, con notificación y acción...
+            Alarm alarmInstanceCheck = new (this, $"{appName}InstanceCheckAlarm", new AlarmProps {
+                AlarmName = $"{appName}InstanceCheckAlarm",
+                AlarmDescription = $"Instance Check Alarm para {appName}",
+                Metric = new Metric(new MetricProps {
+                    Namespace = "AWS/EC2",
+                    DimensionsMap = new Dictionary<string, string> {
+                        { "InstanceId", natInstance.InstanceId }
+                    },
+                    MetricName = "StatusCheckFailed_Instance",
+                    Period = Duration.Minutes(1),
+                }),
+                ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+                Threshold = 1,
+                EvaluationPeriods = 5,
+            });
+            alarmInstanceCheck.AddAlarmAction(new SnsAction(topic));
+            alarmInstanceCheck.AddAlarmAction(new Ec2Action(Ec2InstanceAction.REBOOT));
+
+            Alarm alarmSystemCheck = new (this, $"{appName}SystemCheckAlarm", new AlarmProps {
+                AlarmName = $"{appName}SystemCheckAlarm",
+                AlarmDescription = $"System Check Alarm para {appName}",
+                Metric = new Metric(new MetricProps {
+                    Namespace = "AWS/EC2",
+                    DimensionsMap = new Dictionary<string, string> {
+                        { "InstanceId", natInstance.InstanceId }
+                    },
+                    MetricName = "StatusCheckFailed_System",
+                    Period = Duration.Minutes(1),
+                }),
+                ComparisonOperator = ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+                Threshold = 1,
+                EvaluationPeriods = 5,
+            });
+            alarmSystemCheck.AddAlarmAction(new SnsAction(topic));
+            alarmSystemCheck.AddAlarmAction(new Ec2Action(Ec2InstanceAction.RECOVER));
         }
     }
 }
