@@ -73,6 +73,9 @@ namespace BDiazENatInstance
                 "echo '{ \"agent\": { \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }, \"metrics\": { \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": { \"InstanceId\": \"${aws:InstanceId}\" }, \"metrics_collected\": { \"disk\": { \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }, \"mem\": { \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 } } } }' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
                 "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
 
+                // Se instala cultural info...
+                "dnf install -y libicu",
+
                 // Se instala iptables...
                 "dnf install -y iptables-services",
                 "systemctl enable iptables",
