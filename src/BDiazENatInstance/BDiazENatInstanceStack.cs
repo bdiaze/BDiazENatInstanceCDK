@@ -34,6 +34,8 @@ namespace BDiazENatInstance
             string subnetCidr1 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_1") ?? throw new ArgumentNullException("SUBNET_CIDR_1");
             string subnetCidr2 = System.Environment.GetEnvironmentVariable("SUBNET_CIDR_2") ?? throw new ArgumentNullException("SUBNET_CIDR_2");
 
+            string rdsSecurityGroupId = System.Environment.GetEnvironmentVariable("RDS_SECURITY_GROUP_ID") ?? throw new ArgumentNullException("RDS_SECURITY_GROUP_ID");
+
             string routeTableId = System.Environment.GetEnvironmentVariable("ROUTE_TABLE_ID") ?? throw new ArgumentNullException("ROUTE_TABLE_ID");
             string instanceType = System.Environment.GetEnvironmentVariable("INSTANCE_TYPE") ?? throw new ArgumentNullException("INSTANCE_TYPE");
 
@@ -145,6 +147,10 @@ namespace BDiazENatInstance
             // Se crean reglas para aplicaciones web...
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.HTTP, $"Allow HTTP from anywhere");
             securityGroup.AddIngressRule(Peer.AnyIpv4(), Port.HTTPS, $"Allow HTTPS from anywhere");
+
+            // Se agrega permiso para acceder a RDS...
+            ISecurityGroup rdsSecurityGroup = SecurityGroup.FromSecurityGroupId(this, $"{appName}RDSSecurityGroup", rdsSecurityGroupId);
+            rdsSecurityGroup.AddIngressRule(securityGroup, Port.POSTGRES, "Allow connection from Nat Instance and Web Server");
 
             // Se crea Key Pair para conexiones SSH...
             IKeyPair keyPair = new KeyPair(this, $"{appName}NatInstanceKeyPair", new KeyPairProps {

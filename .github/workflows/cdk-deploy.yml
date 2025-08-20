@@ -26,6 +26,7 @@ jobs:
             SUBNET_CIDR_2: ${{ vars.SUBNET_CIDR_2 }}
             SUBNET_AZ_1: ${{ vars.SUBNET_AZ_1 }}
             SUBNET_AZ_2: ${{ vars.SUBNET_AZ_2 }}
+            RDS_SECURITY_GROUP_ID: ${{ vars.RDS_SECURITY_GROUP_ID }}
             ROUTE_TABLE_ID: ${{ vars.ROUTE_TABLE_ID }}
             INSTANCE_TYPE: ${{ vars.INSTANCE_TYPE }}
             CERTIFICATE_ARN: ${{ vars.CERTIFICATE_ARN }}
