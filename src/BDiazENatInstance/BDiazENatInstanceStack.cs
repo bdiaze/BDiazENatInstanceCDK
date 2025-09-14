@@ -70,10 +70,11 @@ namespace BDiazENatInstance
                 // Se actualizan paquetes...
                 "dnf upgrade -y",
 
-                // Se instala agente de cloudwatch...
-                "dnf install -y amazon-cloudwatch-agent",
-                "echo '{ \"agent\": { \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }, \"metrics\": { \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": { \"InstanceId\": \"${aws:InstanceId}\" }, \"metrics_collected\": { \"disk\": { \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }, \"mem\": { \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 } } } }' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
-                "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
+                // Se crea grupo y carpeta donde las aplicaciones dejarán sus logs...
+                "groupadd logreaders",
+                "mkdir -p /var/log/apps",
+                "chown -R ec2-user:logreaders /var/log/apps",
+                "chmod -R 750 /var/log/apps",
 
                 // Se instala cultural info...
                 "dnf install -y libicu",
@@ -100,11 +101,19 @@ namespace BDiazENatInstance
 
                 // Además se instala nginx para hospedar aplicaciones web (por ahorro de costos, se usará solo una instancia EC2 como NAT y servidor web)...
                 "dnf install -y nginx",
-                "systemctl enable nginx",
-                "systemctl start nginx",
 
                 // Se cambia el server_name de nginx según el subdomainName a utilizar...
                 $"sed -i 's/server_name  _;/server_name  {subdomainName};/g' /etc/nginx/nginx.conf",
+
+                // Se cambia formato de logformat...
+                "sed -i 's/\\[\\$time_local\\]/\\[\\$time_iso8601\\]/g' /etc/nginx/nginx.conf",
+
+                // Se configura logrotate a usar grupo creado anteriormente...
+                "sed -i 's/create 0640 nginx root/create 0640 nginx logreaders/' /etc/logrotate.d/nginx",
+                "logrotate -f /etc/logrotate.d/nginx",
+
+                "systemctl enable nginx",
+                "systemctl start nginx",
 
                 // Se genera certificados para HTTPS
                 "dnf install -y python3 python-devel augeas-devel gcc",
@@ -125,7 +134,13 @@ namespace BDiazENatInstance
                 // Se crea hook script para recargar nginx al renovar el certificado...
                 "echo '#!/bin/bash' | tee /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh",
                 "echo 'systemctl reload nginx' | tee -a /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh",
-                "chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh"
+                "chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-webserver.sh",
+
+                // Se instala agente de cloudwatch...
+                "dnf install -y amazon-cloudwatch-agent",
+                "usermod -aG logreaders cwagent",
+                $"echo '{{ \"agent\": {{ \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }}, \"metrics\": {{ \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": {{ \"InstanceId\": \"${{aws:InstanceId}}\" }}, \"metrics_collected\": {{ \"disk\": {{ \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }}, \"mem\": {{ \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 }} }} }}, \"logs\": {{ \"logs_collected\": {{ \"files\": {{ \"collect_list\": [ {{ \"file_path\": \"/var/log/nginx/access.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/access-log\", \"log_stream_name\": \"{{instance_id}}-access\", \"timestamp_format\": \"[%Y-%m-%dT%H:%M:%S%z]\" }}, {{ \"file_path\": \"/var/log/nginx/error.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/error-log\", \"log_stream_name\": \"{{instance_id}}-error\", \"timestamp_format\": \"%Y/%m/%d %H:%M:%S\" }}, {{ \"file_path\": \"/var/log/apps/*/*.log\", \"log_group_name\": \"/aws/ec2/{appName}/apps/{{folder_name}}\", \"log_stream_name\": \"{{instance_id}}-{{file_name}}\", \"timestamp_format\": \"%Y-%m-%dT%H:%M:%S\" }} ] }} }} }} }}' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
+                "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json"
             );
 
             // Se crea security group...
@@ -177,6 +192,19 @@ namespace BDiazENatInstance
                                     ],
                                     Resources = [
                                         $"arn:aws:iam::{account}:role/{appName}-NatInstanceWebServer-SubRole-*",
+                                    ],
+                                }),
+                                new PolicyStatement(new PolicyStatementProps{
+                                    Sid = $"{appName}AccessToCloudWatch",
+                                    Actions = [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "logs:DescribeLogGroups",
+                                        "logs:DescribeLogStreams"
+                                    ],
+                                    Resources = [
+                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
                                     ],
                                 }),
                             ]
