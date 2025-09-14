@@ -218,17 +218,10 @@ namespace BDiazENatInstance
                                         "logs:PutLogEvents",
                                         "logs:PutRetentionPolicy",
                                     ],
-                                    Resources = [
-                                        $"*",
+                                    NotResources = [
+                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
+                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*:log-stream:*"
                                     ],
-                                    Conditions = new Dictionary<string, object> {
-                                        { "StringNotLike" , new Dictionary<string, object> {
-                                            { "aws:Resource", new[] {
-                                                $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
-                                                $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*:log-stream:*"
-                                            }}
-                                        }}
-                                    }
                                 }),
                                 new PolicyStatement(new PolicyStatementProps{
                                     Sid = $"{appName}DenyToCreateGroupsCloudWatch",
