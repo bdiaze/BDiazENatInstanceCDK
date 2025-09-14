@@ -107,6 +107,7 @@ namespace BDiazENatInstance
 
                 // Se cambia formato de logformat...
                 "sed -i 's/\\[\\$time_local\\]/\\[\\$time_iso8601\\]/g' /etc/nginx/nginx.conf",
+                "sed -i 's/\"\\$http_x_forwarded_for\"/\\$server_name \\$request_uri \\$hostname \\$server_port \"\\$http_x_forwarded_for\" \"\\$http_cf_connecting_ip\" \\$http_cf_ray \\$http_cf_country/' /etc/nginx/nginx.conf",
 
                 // Se configura logrotate a usar grupo creado anteriormente...
                 "sed -i 's/create 0640 nginx root/create 0640 nginx logreaders/' /etc/logrotate.d/nginx",
