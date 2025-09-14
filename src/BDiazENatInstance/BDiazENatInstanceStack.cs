@@ -7,6 +7,7 @@ using Amazon.CDK.AWS.CloudWatch.Actions;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.Events.Targets;
 using Amazon.CDK.AWS.IAM;
+using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.Route53;
 using Amazon.CDK.AWS.Route53.Targets;
 using Amazon.CDK.AWS.S3;
@@ -15,6 +16,7 @@ using Amazon.CDK.AWS.SNS.Subscriptions;
 using Constructs;
 using System;
 using System.Collections.Generic;
+using LogGroupProps = Amazon.CDK.AWS.Logs.LogGroupProps;
 
 namespace BDiazENatInstance
 {
@@ -174,6 +176,18 @@ namespace BDiazENatInstance
                 KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
+            // Se crea log group para nginx...
+            _ = new LogGroup(this, $"{appName}NginxAccessLogGroup", new LogGroupProps {
+                LogGroupName = $"/aws/ec2/{appName}/nginx/access-log",
+                Retention = RetentionDays.ONE_MONTH,
+                RemovalPolicy = RemovalPolicy.DESTROY
+            });
+            _ = new LogGroup(this, $"{appName}NginxErrorLogGroup", new LogGroupProps {
+                LogGroupName = $"/aws/ec2/{appName}/nginx/error-log",
+                Retention = RetentionDays.ONE_MONTH,
+                RemovalPolicy = RemovalPolicy.DESTROY
+            });
+
             Role role = new(this, $"{appName}NatInstanceRole", new RoleProps {
                 RoleName = $"{appName}NatInstanceAndWebServerRole",
                 Description = $"Role para Instancia NAT y Web Server de {appName}",
@@ -197,16 +211,31 @@ namespace BDiazENatInstance
                                     ],
                                 }),
                                 new PolicyStatement(new PolicyStatementProps{
-                                    Sid = $"{appName}AccessToCloudWatch",
+                                    Sid = $"{appName}DenyToOtherCloudWatch",
+                                    Effect = Effect.DENY,
                                     Actions = [
-                                        "logs:CreateLogGroup",
-                                        "logs:CreateLogStream",
-                                        "logs:PutLogEvents",
-                                        "logs:DescribeLogGroups",
-                                        "logs:DescribeLogStreams"
+                                        "logs:*",
                                     ],
                                     Resources = [
-                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
+                                        $"*",
+                                    ],
+                                    Conditions = new Dictionary<string, object> {
+                                        { "StringNotLike" , new Dictionary<string, object> {
+                                            { "aws:Resource", new[] {
+                                                $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
+                                                $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*:log-stream:*"
+                                            }}
+                                        }}
+                                    }
+                                }),
+                                new PolicyStatement(new PolicyStatementProps{
+                                    Sid = $"{appName}DenyToCreateGroupsCloudWatch",
+                                    Effect = Effect.DENY,
+                                    Actions = [
+                                        "logs:CreateLogGroup",
+                                    ],
+                                    Resources = [
+                                        $"*",
                                     ],
                                 }),
                             ]
