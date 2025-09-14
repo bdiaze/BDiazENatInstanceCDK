@@ -214,7 +214,9 @@ namespace BDiazENatInstance
                                     Sid = $"{appName}DenyToOtherCloudWatch",
                                     Effect = Effect.DENY,
                                     Actions = [
-                                        "logs:*",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "logs:PutRetentionPolicy",
                                     ],
                                     Resources = [
                                         $"*",
