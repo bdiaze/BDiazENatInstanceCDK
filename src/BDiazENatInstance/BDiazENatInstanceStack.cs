@@ -143,7 +143,7 @@ namespace BDiazENatInstance
                 // Se instala agente de cloudwatch...
                 "dnf install -y amazon-cloudwatch-agent",
                 "usermod -aG logreaders cwagent",
-                $"echo '{{ \"agent\": {{ \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }}, \"metrics\": {{ \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": {{ \"InstanceId\": \"${{aws:InstanceId}}\" }}, \"metrics_collected\": {{ \"disk\": {{ \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }}, \"mem\": {{ \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 }} }} }}, \"logs\": {{ \"logs_collected\": {{ \"files\": {{ \"collect_list\": [ {{ \"file_path\": \"/var/log/nginx/access.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/access-log\", \"log_stream_name\": \"{{instance_id}}-access\", \"timestamp_format\": \"[%Y-%m-%dT%H:%M:%S%z]\" }}, {{ \"file_path\": \"/var/log/nginx/error.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/error-log\", \"log_stream_name\": \"{{instance_id}}-error\", \"timestamp_format\": \"%Y/%m/%d %H:%M:%S\" }}, {{ \"file_path\": \"/var/log/apps/*/*.log\", \"log_group_name\": \"/aws/ec2/{appName}/apps/{{folder_name}}\", \"log_stream_name\": \"{{instance_id}}-{{file_name}}\", \"timestamp_format\": \"%Y-%m-%dT%H:%M:%S\" }} ] }} }} }} }}' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
+                $"echo '{{ \"agent\": {{ \"metrics_collection_interval\": 60, \"run_as_user\": \"cwagent\" }}, \"metrics\": {{ \"aggregation_dimensions\": [ [ \"InstanceId\" ] ], \"append_dimensions\": {{ \"InstanceId\": \"${{aws:InstanceId}}\" }}, \"metrics_collected\": {{ \"disk\": {{ \"measurement\": [ \"used_percent\" ], \"metrics_collection_interval\": 60, \"resources\": [ \"*\" ] }}, \"mem\": {{ \"measurement\": [ \"mem_used_percent\" ], \"metrics_collection_interval\": 60 }} }} }}, \"logs\": {{ \"logs_collected\": {{ \"files\": {{ \"collect_list\": [ {{ \"file_path\": \"/var/log/nginx/access.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/access-log\", \"timestamp_format\": \"[%Y-%m-%dT%H:%M:%S%z]\", \"retention_in_days\": \"30\" }}, {{ \"file_path\": \"/var/log/nginx/error.log\", \"log_group_name\": \"/aws/ec2/{appName}/nginx/error-log\", \"timestamp_format\": \"%Y/%m/%d %H:%M:%S\", \"retention_in_days\": \"30\" }}, {{ \"file_path\": \"/var/log/apps/**.log\", \"log_group_name\": \"/aws/ec2/{appName}/apps\", \"retention_in_days\": \"30\" }} ] }} }} }} }}' | tee /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json",
                 "/opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent.json"
             );
 
@@ -176,18 +176,6 @@ namespace BDiazENatInstance
                 KeyPairName = $"{appName}NatInstanceAndWebServerKeyPair",
             });
 
-            // Se crea log group para nginx...
-            _ = new LogGroup(this, $"{appName}NginxAccessLogGroup", new LogGroupProps {
-                LogGroupName = $"/aws/ec2/{appName}/nginx/access-log",
-                Retention = RetentionDays.ONE_MONTH,
-                RemovalPolicy = RemovalPolicy.DESTROY
-            });
-            _ = new LogGroup(this, $"{appName}NginxErrorLogGroup", new LogGroupProps {
-                LogGroupName = $"/aws/ec2/{appName}/nginx/error-log",
-                Retention = RetentionDays.ONE_MONTH,
-                RemovalPolicy = RemovalPolicy.DESTROY
-            });
-
             Role role = new(this, $"{appName}NatInstanceRole", new RoleProps {
                 RoleName = $"{appName}NatInstanceAndWebServerRole",
                 Description = $"Role para Instancia NAT y Web Server de {appName}",
@@ -208,29 +196,6 @@ namespace BDiazENatInstance
                                     ],
                                     Resources = [
                                         $"arn:aws:iam::{account}:role/{appName}-NatInstanceWebServer-SubRole-*",
-                                    ],
-                                }),
-                                new PolicyStatement(new PolicyStatementProps{
-                                    Sid = $"{appName}DenyToOtherCloudWatch",
-                                    Effect = Effect.DENY,
-                                    Actions = [
-                                        "logs:CreateLogStream",
-                                        "logs:PutLogEvents",
-                                        "logs:PutRetentionPolicy",
-                                    ],
-                                    NotResources = [
-                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*",
-                                        $"arn:aws:logs:{this.Region}:{this.Account}:log-group:/aws/ec2/{appName}/*:log-stream:*"
-                                    ],
-                                }),
-                                new PolicyStatement(new PolicyStatementProps{
-                                    Sid = $"{appName}DenyToCreateGroupsCloudWatch",
-                                    Effect = Effect.DENY,
-                                    Actions = [
-                                        "logs:CreateLogGroup",
-                                    ],
-                                    Resources = [
-                                        $"*",
                                     ],
                                 }),
                             ]
