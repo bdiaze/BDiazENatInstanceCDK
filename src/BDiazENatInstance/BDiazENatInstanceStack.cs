@@ -106,6 +106,7 @@ namespace BDiazENatInstance
                 $"sed -i 's/server_name  _;/server_name  {subdomainName};/g' /etc/nginx/nginx.conf",
 
                 // Se cambia formato de logformat...
+                "sed -i 's/error_log \\/var\\/log\\/nginx\\/error.log notice/error_log \\/var\\/log\\/nginx\\/error.log warn/' /etc/nginx/nginx.conf",
                 "sed -i 's/\\[\\$time_local\\]/\\[\\$time_iso8601\\]/g' /etc/nginx/nginx.conf",
                 "sed -i 's/\"\\$http_x_forwarded_for\"/\\$server_name \\$request_uri \\$hostname \\$server_port \"\\$http_x_forwarded_for\" \"\\$http_cf_connecting_ip\" \\$http_cf_ray \\$http_cf_country/' /etc/nginx/nginx.conf",
 
