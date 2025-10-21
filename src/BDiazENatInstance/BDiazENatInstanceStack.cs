@@ -109,8 +109,19 @@ namespace BDiazENatInstance
 
                 // Se cambia formato de logformat...
                 "sed -i 's/error_log \\/var\\/log\\/nginx\\/error.log notice/error_log \\/var\\/log\\/nginx\\/error.log warn/' /etc/nginx/nginx.conf",
-                "sed -i 's/\\[\\$time_local\\]/\\[\\$time_iso8601\\]/g' /etc/nginx/nginx.conf",
-                "sed -i 's/\"\\$http_x_forwarded_for\"/\\$server_name \\$request_uri \\$hostname \\$server_port \"\\$http_x_forwarded_for\" \"\\$http_cf_connecting_ip\" \\$http_cf_ray \\$http_cf_ipcountry/' /etc/nginx/nginx.conf",
+
+                "sed -i 's/\\$remote_addr/Remote Addr: \\$remote_addr/' /etc/nginx/nginx.conf",
+                "sed -i 's/\\$remote_user/Remote User: \\$remote_user/' /etc/nginx/nginx.conf",
+                "sed -i 's/\\[\\$time_local\\]/\\- Time: \\[\\$time_iso8601\\]/g' /etc/nginx/nginx.conf",
+                "sed -i 's/\"\\$request\"/\\- Request: \"\\$request\"/' /etc/nginx/nginx.conf",
+
+                "sed -i 's/\\$status/\\- Status: \\$status/' /etc/nginx/nginx.conf",
+                "sed -i 's/\\$body_bytes_sent/\\- Bytes Sent: \\$body_bytes_sent \\- Request Time: \\$request_time \\- Upstream Response Time: \\$upstream_response_time/' /etc/nginx/nginx.conf",
+                "sed -i 's/\"\\$http_referer\"/\\- Referer: \"\\$http_referer\"/' /etc/nginx/nginx.conf",
+
+
+                "sed -i 's/\"\\$http_user_agent\"/\\- User Agent: \"\\$http_user_agent\"/' /etc/nginx/nginx.conf",
+                "sed -i 's/\"\\$http_x_forwarded_for\"/\\- Host: \\$host \\- Server Name: \\$server_name \\- Request URI: \\$request_uri \\- Hostname: \\$hostname \\- Server Port: \\$server_port \\- X Forwarded For: \"\\$http_x_forwarded_for\" \\- CF Connecting IP: \"\\$http_cf_connecting_ip\" \\- CF Ray: \\$http_cf_ray \\- CF IP Country: \\$http_cf_ipcountry/' /etc/nginx/nginx.conf",
 
                 // Se configura logrotate a usar grupo creado anteriormente...
                 "sed -i 's/create 0640 nginx root/create 0640 nginx logreaders/' /etc/logrotate.d/nginx",
