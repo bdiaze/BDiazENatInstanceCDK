@@ -143,7 +143,8 @@ namespace BDiazENatInstance
                 "dnf install -y cronie",
                 "systemctl enable crond",
                 "systemctl start crond",
-                "echo '0 */12 * * * root /usr/bin/certbot renew --quiet' | tee /etc/cron.d/certbot",
+				"echo 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' | tee /etc/cron.d/certbot",
+				"echo '0 */12 * * * root /usr/bin/certbot renew --quiet' | tee -a /etc/cron.d/certbot",
                 "systemctl reload crond",
 
                 // Se crea hook script para recargar nginx al renovar el certificado...
