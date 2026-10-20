@@ -232,7 +232,6 @@ namespace BDiazENatInstance
                 SourceDestCheck = false,
                 KeyPair = keyPair,
                 Role = role,
-                DetailedMonitoring = true,
             });
 
             // Se crea una IP elastica para la instancia y el DNS...
