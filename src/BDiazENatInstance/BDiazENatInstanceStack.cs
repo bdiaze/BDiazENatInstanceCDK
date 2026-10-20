@@ -69,9 +69,6 @@ namespace BDiazENatInstance
             // Se crea User Data para la instancia...
             UserData userData = UserData.ForLinux();
             userData.AddCommands(
-                // Se actualizan paquetes...
-                "dnf upgrade -y",
-
                 // Se crea grupo y carpeta donde las aplicaciones dejarán sus logs...
                 "groupadd logreaders",
                 "mkdir -p /var/log/apps",
